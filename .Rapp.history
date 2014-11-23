@@ -1,0 +1,2428 @@
+j=1
+(data[j,5] !=any(c(3,8,13)))
+(data[j,5] !=3 & data[j,5] !=13)
+data[j,5]
+REM 612 Modelling Progject#
+# Create Sponge Grid and Distribution for Bowie Seamount#
+# Beau Doherty - Feb 26, 2014#
+#
+rm(list=ls())#
+##-------- Initial Parameterization--------------------------------------------------#
+#
+## Create Matrix that contains x nd y coordinates for Bowie Seamount- 15 cells of 13 km by 13 km, so each cell is 169 sq. km total area of bowie zone 2 is 2538 sq. km.... Each cell will be numbered 1 through 15, moving from left to right in the grid. Row 1 shows info for most NW cell, row 5 most NE, row 10 most SW and row 15 most SE#
+#
+nCells <- 15#
+BowieData <-matrix(NA, nrow=nCells, byrow=T)  # matrix holds all values for each grid#
+# Define Fishing Paramters#
+trapRadius	<- 1  					# m#
+setLength  	<- 4  					# km#
+numTraps	<- 50 					# of traps per set#
+nSets		<- 100					# of sets per year#
+#
+trapSpace	<- setLength/(numTraps-1) 	# Assuming equal spacing#
+trapArea 	<- pi*trapRadius^2/1000000	# Area of 1 trap in km2#
+setArea 	<- numTraps * trapArea		# for now we ignore area of groundline#
+#
+# Assign Depths to each grid and spongeDensity to each grid#
+#
+#-------------- Assign Sponge Areas to different grid cells -------------------#
+#
+# Source Model for predicting sponge density and sample depths in each grid.#
+#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/spongeModel2.r")#
+#
+# Sourcing Set Distribution function#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/setDistribution.r")#
+#
+# Create vectors that hold x and y values for each centre location of sponge. #
+#
+spgCentreX <- vector("numeric", length=nCells) # kms to East of most SW pt. in cell#
+spgCentreY <- vector("numeric", length=nCells) # kms to North of most SW pt. in cell#
+spgArea    <- vector("numeric", length=nCells) # Sq. km of sponge patch#
+spgLength  <- vector("numeric", length=nCells) # Side length of square sponge patch (km)#
+#
+# Sponge Density represents side length (in km) of each area of sponge. For simplicity, each sponge patch is modelled as a square. Need to distribute centre of sponge so that it does not extend into other cells#
+#spgDensity <- possSpongeDensity#
+#
+scalar		 <- 1#
+spgLength <- scalar + possSpongeDensity#
+spgArea   <- spgLength^2	#
+#
+# Assign random centre points for each sponge ground in each grid cell. Set so that sponge area#
+# cannot extend beyond one grid cell#
+#
+for ( i in 1:nCells) #
+{		#
+		possStartX <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreX[i] <- sample (possStartX, 1, replace=FALSE) # Randomly selects centre pt for X#
+		possStartY <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreY[i] <- sample (possStartY, 1, replace=FALSE) # Randomly selects centre pt for X#
+}#
+#
+spgAreaE <- vector ("numeric", nCells) # holds East bound of sponge area#
+spgAreaW <- vector ("numeric", nCells) # holds West bound of sponge area#
+spgAreaN <- vector ("numeric", nCells) # holds North bound of sponge area#
+spgAreaS <- vector ("numeric", nCells) # holds South bound of sponge area#
+#
+spgAreaE <- spgCentreX + spgLength/2#
+spgAreaW <- spgCentreX - spgLength/2#
+spgAreaN <- spgCentreY + spgLength/2#
+spgAreaS <- spgCentreY - spgLength/2#
+#
+spgAreaMat 		<- matrix (NA, nrow=15, ncol=4 )#
+spgAreaMat[,1] 	<- spgAreaE#
+spgAreaMat[,2] 	<- spgAreaW#
+spgAreaMat[,3] 	<- spgAreaN#
+spgAreaMat[,4] 	<- spgAreaS#
+#
+colnames(spgAreaMat) = c("E Edge","W Edge","N Edge","S Edge")#
+#
+spgVals <- cbind (spgAreaMat, spgArea, spgLength, spgCentreX, spgCentreY)#
+#
+# -------------------- year loop------------------------------------------------#
+# ------------------- Distribute Fishing Sets ------------------------------------#
+setVals <- setDistribution (nCells=nCells, nSets=nSets )#
+#attach (setVals)#
+#
+checkplot<- vector ("character", nSets)#
+#
+par (mfrow = c(3,5), mar=c(2,1,1,2))#
+#
+#cell loop#
+#
+for (i in 1:nCells)#
+{#
+	# effort#
+	plot (x=c(spgAreaW[i], spgAreaW[i], spgAreaE[i], spgAreaE[i], spgAreaW[i]), #
+		  y=c(spgAreaS[i], spgAreaN[i], spgAreaN[i], spgAreaS[i], spgAreaS[i]),#
+		  type = "l", col="firebrick1",main= paste("Grid#",i), xlab = "EW x coords", ylab = "SN y coords", #
+		  ylim=c(0,13), xlim=c(0,13), las=1 #
+		  )#
+		  data <- setVals[setVals[,"setLocation"]==i,] # selects rows from column Set Location that#
+		  if( nrow(data) > 0 )#
+	      {#
+			  for (j in 1:nrow(data))	#
+			  { #
+				  # check for hits#
+				if (data[j,5] !=3 & data[j,5] !=13) #any(c(3,8,13)#
+			    {#
+					# get coordinates#
+					# send to hitFunc#
+					# save mortality#
+					# draw segments#
+				  	segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaE"], data[j,"setAreaS"] )#
+			    }#
+				else #
+					segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaW"], data[j,"setAreaN"] )#
+			  }	      	#
+	      } #
+		  # mortality#
+		  # update population#
+} # end cells#
+# save plot
+setVals
+head(setVals)
+EWsets   <- subset(setVals, setVals[setVals[,"setLocation"]==1,] )
+EWsets   <- subset(setVals, setVals[,5]==1 )
+EWsets
+EWsets   <- subset(setVals, setVals[,5]==1:7 )
+EWsets   <- subset(setVals, setVals[,5]==anyc(1:7) )
+EWsets   <- subset(setVals, setVals[,"setLocation"]==1 )
+EWsets
+EWsets   <- subset(setVals, setVals[,"setLocation"]== any(1,2,3) )
+EWsets   <- subset(setVals, setVals[,"setLocation"]== 8 )
+EWsets
+EWsets   <- subset(setVals, setVals[,5]!=3 & setVals[,5]!=)
+EWsets   <- subset(setVals, setVals[,5]!=3 & setVals[,5]!=13)
+EWsets
+length(EWsets)
+length(EWsets[,5])
+nrow(EWsets)
+nCells=nCells, nSets=nCells, sets=setVals, spgArea = spgAreMat
+nCells=nCells
+sets=setVals
+EWsets   <- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   <- subset(sets, sets[,5]!=3 & sets[,5]!=13)
+spg = spgAreaMat
+spg
+spg[,1]
+spg[,"E Edge"]
+spg[,"W Edge"]
+head(sets)
+sets[1,"setCentreX""]
+]
+)
+c
+stop()
+sets[1,5]
+sets[1,"setCentreX"]
+sets[1,6]
+i=1
+(sets[i,"setCentreX"]-2) >= spg[i,"W Edge"]
+(sets[i,"setCentreX"]-2)
+(EWsets[i,"setCentreX"]-2) >= spg[i,"W Edge"]
+i=1
+(EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"]
+(EWsets[i,"setCentreX"]-2) >= spg[i,"W Edge"]
+EWsets[i,"setCentreY"]	 <= spg[i,"N Edge"]
+EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]
+EWsets[1,"setCentreY"]
+EWsets
+hitChar  	<- vector ("character", nSets) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nSets) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nSets) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nSets) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nSets) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	hitLength<- subset(sets, sets[,5]!=3 & sets[,5]!=13)
+SNsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[i,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[i,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (   setDirection[i]   == "WE"#
+					& (EWsets[i,"setCentreX"]+2) >= spg[i,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[i,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else (   setDirection[i]   == "WE"#
+					&  EWsets[i,"setCentreX"] >= spg[i,"W Edge"] #
+			  		&  EWsets[i,"setCentreX"]  <= spg[i,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"] <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"] >= spg[i,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+			} 			#
+}
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[i,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[i,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (   setDirection[i]   == "WE"#
+					& (EWsets[i,"setCentreX"]+2) >= spg[i,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[i,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else (   setDirection[i]   == "WE"#
+					&  EWsets[i,"setCentreX"] >= spg[i,"W Edge"] #
+			  		&  EWsets[i,"setCentreX"] <= spg[i,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"] <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"] >= spg[i,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+			} 			#
+}
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[i,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[i,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[i,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[i,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else(   EWsets[i,"setCentreX"] >= spg[i,"W Edge"] #
+			   &  EWsets[i,"setCentreX"] <= spg[i,"E Edge"]#
+			   &  EWsets[i,"setCentreY"] <= spg[i,"N Edge"]#
+		       &  EWsets[i,"setCentreY"] >= spg[i,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[i,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[i,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[i,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[i,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else if (   EWsets[i,"setCentreX"] >= spg[i,"W Edge"] #
+			      &  EWsets[i,"setCentreX"] <= spg[i,"E Edge"]#
+			      &  EWsets[i,"setCentreY"] <= spg[i,"N Edge"]#
+		          &  EWsets[i,"setCentreY"] >= spg[i,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}
+i=5
+spg[i,"W Edge"]
+nrwo(EWsets)
+nrow(EWsets)
+data
+sets=data
+hitChar  	<- vector ("character", nSets) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nSets) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nSets) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nSets) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nSets) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[i,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[i,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[i,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[i,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else if (   EWsets[i,"setCentreX"] >= spg[i,"W Edge"] #
+			      &  EWsets[i,"setCentreX"] <= spg[i,"E Edge"]#
+			      &  EWsets[i,"setCentreY"] <= spg[i,"N Edge"]#
+		          &  EWsets[i,"setCentreY"] >= spg[i,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}
+hitBin
+sets
+EWsets
+SNsets
+SNsets   	<- subset(sets, sets[,5]=3 & sets[,5]=13)
+SNsets   	<- subset(sets, sets[,5]==3 & sets[,5]==13)
+SNsets
+nrow(sets)
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	<- subset(sets, sets[,5]==3 & sets[,5]==13)#
+#
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[i,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[i,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[i,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[i,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[i,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[i,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[i,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else if (   EWsets[i,"setCentreX"] >= spg[i,"W Edge"] #
+			      &  EWsets[i,"setCentreX"] <= spg[i,"E Edge"]#
+			      &  EWsets[i,"setCentreY"] <= spg[i,"N Edge"]#
+		          &  EWsets[i,"setCentreY"] >= spg[i,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}
+hitBin
+data
+GridNum		<- sets[1,"setLocation"]
+GridNum
+spg[GridNum,"W Edge"]
+<- sets[1,"setLocation"]
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	<- subset(sets, sets[,5]==3 & sets[,5]==13)#
+GridNum		<- sets[1,"setLocation"]#
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[GridNum,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum	,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[GridNum,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[GridNum,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else if (  EWsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			      &  EWsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			      &  EWsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		          &  EWsets[i,"setCentreY"] >= spg[GridNum,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}
+hitBin
+hit <- function (nCells=nCells, sets=data, spg = spgAreaMat, setArea=setArea#
+				 setLength = setLength	) {#
+#
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	<- subset(sets, sets[,5]==3 & sets[,5]==13)#
+GridNum		<- sets[1,"setLocation"]#
+#
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[GridNum,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum	,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[GridNum,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[GridNum,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else if (  EWsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			      &  EWsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			      &  EWsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		          &  EWsets[i,"setCentreY"] >= spg[GridNum,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}			#
+#
+for ( i in 1:nrow(SNsets)) 	#
+{			#
+#--------  Check 3 potential cases for SN set direction --------------------				#
+		# Check Case 4 to see if south point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge 		   #
+		if   (SNsets[i,"setCentreX"] 	 >= spg[GridNum,"W Edge"] #
+	  		 &SNsets[i,"setCentreX"] 	 <= spg[GridNum,"E Edge"]#
+	  		 &(SNsets[i,"setCentreY"]-2) <= spg[GridNum,"N Edge"]#
+     		 &(SNsets[i,"setCentreY"]-2) >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum,"N Edge"] - (SNsets[i,"setCentreY"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength #
+			hitCase[i] <- 4#
+		# Check Case 5 to see if north point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge   #
+		} else if (SNsets[i,"setCentreX"] 	  >= spg[GridNum,"W Edge"] #
+	  		 	  &SNsets[i,"setCentreX"] 	  <= spg[GridNum,"E Edge"]#
+	 	  		  &(SNsets[i,"setCentreY"]+2) <= spg[GridNum,"N Edge"]#
+	      		  &(SNsets[i,"setCentreY"]+2) >= spg[GridNum,"S Edge"]) ) {#
+				hitChar[i]     <- "YES"#
+				hitBin[i]      <- 1#
+				hitLength[i] <- (SNsets[i,"setCentreY"]+2) - spg[GridNum,"S Edge"]#
+				hitArea[i] <- hitLength[i]*setArea/setLength 	#
+				hitCase[i] <- 5#
+		# Check Case 6 to see if middle portion of set intersects sponge, but N and S ends#
+		# of set are outside sponge area	#
+		} else if (SNsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			  	  &SNsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			  	  &SNsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		     	  &SNsets[i,"setCentreY"] >= spg[GridNum,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1	#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 6#
+		} else {#
+			hitChar[i]     <- "NO"#
+			hitBin[i]      <- 0#
+		} #
+}#
+#
+hitVals <- cbind (hitBin, hitCase, hitLength, hitArea, )	#
+return (hitvals)#
+#
+}
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	<- subset(sets, sets[,5]==3 & sets[,5]==13)#
+GridNum		<- sets[1,"setLocation"]#
+#
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[GridNum,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum	,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[GridNum,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[GridNum,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else if (  EWsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			      &  EWsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			      &  EWsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		          &  EWsets[i,"setCentreY"] >= spg[GridNum,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}			#
+#
+for ( i in 1:nrow(SNsets)) 	#
+{			#
+#--------  Check 3 potential cases for SN set direction --------------------				#
+		# Check Case 4 to see if south point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge 		   #
+		if   (SNsets[i,"setCentreX"] 	 >= spg[GridNum,"W Edge"] #
+	  		 &SNsets[i,"setCentreX"] 	 <= spg[GridNum,"E Edge"]#
+	  		 &(SNsets[i,"setCentreY"]-2) <= spg[GridNum,"N Edge"]#
+     		 &(SNsets[i,"setCentreY"]-2) >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum,"N Edge"] - (SNsets[i,"setCentreY"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength #
+			hitCase[i] <- 4#
+		# Check Case 5 to see if north point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge   #
+		} else if (SNsets[i,"setCentreX"] 	  >= spg[GridNum,"W Edge"] #
+	  		 	  &SNsets[i,"setCentreX"] 	  <= spg[GridNum,"E Edge"]#
+	 	  		  &(SNsets[i,"setCentreY"]+2) <= spg[GridNum,"N Edge"]#
+	      		  &(SNsets[i,"setCentreY"]+2) >= spg[GridNum,"S Edge"]) ) {#
+				hitChar[i]     <- "YES"#
+				hitBin[i]      <- 1#
+				hitLength[i] <- (SNsets[i,"setCentreY"]+2) - spg[GridNum,"S Edge"]#
+				hitArea[i] <- hitLength[i]*setArea/setLength 	#
+				hitCase[i] <- 5#
+		# Check Case 6 to see if middle portion of set intersects sponge, but N and S ends#
+		# of set are outside sponge area	#
+		} else if (SNsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			  	  &SNsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			  	  &SNsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		     	  &SNsets[i,"setCentreY"] >= spg[GridNum,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1	#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 6#
+		} else {#
+			hitChar[i]     <- "NO"#
+			hitBin[i]      <- 0#
+		} #
+}#
+#
+hitVals <- cbind (hitBin, hitCase, hitLength, hitArea, )
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	<- subset(sets, sets[,5]==3 & sets[,5]==13)#
+GridNum		<- sets[1,"setLocation"]#
+#
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[GridNum,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum	,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[GridNum,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[GridNum,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else if (  EWsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			      &  EWsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			      &  EWsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		          &  EWsets[i,"setCentreY"] >= spg[GridNum,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}			#
+#
+for ( i in 1:nrow(SNsets)) 	#
+{			#
+#--------  Check 3 potential cases for SN set direction --------------------				#
+		# Check Case 4 to see if south point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge 		   #
+		if   (SNsets[i,"setCentreX"] 	 >= spg[GridNum,"W Edge"] #
+	  		 &SNsets[i,"setCentreX"] 	 <= spg[GridNum,"E Edge"]#
+	  		 &(SNsets[i,"setCentreY"]-2) <= spg[GridNum,"N Edge"]#
+     		 &(SNsets[i,"setCentreY"]-2) >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum,"N Edge"] - (SNsets[i,"setCentreY"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength #
+			hitCase[i] <- 4#
+		# Check Case 5 to see if north point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge   #
+		} else if (SNsets[i,"setCentreX"] 	  >= spg[GridNum,"W Edge"] #
+	  		 	  &SNsets[i,"setCentreX"] 	  <= spg[GridNum,"E Edge"]#
+	 	  		  &(SNsets[i,"setCentreY"]+2) <= spg[GridNum,"N Edge"]#
+	      		  &(SNsets[i,"setCentreY"]+2) >= spg[GridNum,"S Edge"] ) {#
+				hitChar[i]     <- "YES"#
+				hitBin[i]      <- 1#
+				hitLength[i] <- (SNsets[i,"setCentreY"]+2) - spg[GridNum,"S Edge"]#
+				hitArea[i] <- hitLength[i]*setArea/setLength 	#
+				hitCase[i] <- 5#
+		# Check Case 6 to see if middle portion of set intersects sponge, but N and S ends#
+		# of set are outside sponge area	#
+		} else if (SNsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			  	  &SNsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			  	  &SNsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		     	  &SNsets[i,"setCentreY"] >= spg[GridNum,"S Edge"] ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1	#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 6#
+		} else {#
+			hitChar[i]     <- "NO"#
+			hitBin[i]      <- 0#
+		} #
+}#
+#
+hitVals <- cbind (hitBin, hitCase, hitLength, hitArea, )
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	<- subset(sets, sets[,5]==3 & sets[,5]==13)#
+GridNum		<- sets[1,"setLocation"]#
+#
+if (nrow(EWsets)>0)#
+{#
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[GridNum,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum	,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[GridNum,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[GridNum,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else if (  EWsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			      &  EWsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			      &  EWsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		          &  EWsets[i,"setCentreY"] >= spg[GridNum,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}			#
+}#
+#
+if (nrwo(SNsets)>0)#
+{	#
+for ( i in 1:nrow(SNsets)) 	#
+{			#
+#--------  Check 3 potential cases for SN set direction --------------------				#
+		# Check Case 4 to see if south point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge 		   #
+		if   (SNsets[i,"setCentreX"] 	 >= spg[GridNum,"W Edge"] #
+	  		 &SNsets[i,"setCentreX"] 	 <= spg[GridNum,"E Edge"]#
+	  		 &(SNsets[i,"setCentreY"]-2) <= spg[GridNum,"N Edge"]#
+     		 &(SNsets[i,"setCentreY"]-2) >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum,"N Edge"] - (SNsets[i,"setCentreY"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength #
+			hitCase[i] <- 4#
+		# Check Case 5 to see if north point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge   #
+		} else if (SNsets[i,"setCentreX"] 	  >= spg[GridNum,"W Edge"] #
+	  		 	  &SNsets[i,"setCentreX"] 	  <= spg[GridNum,"E Edge"]#
+	 	  		  &(SNsets[i,"setCentreY"]+2) <= spg[GridNum,"N Edge"]#
+	      		  &(SNsets[i,"setCentreY"]+2) >= spg[GridNum,"S Edge"] ) {#
+				hitChar[i]     <- "YES"#
+				hitBin[i]      <- 1#
+				hitLength[i] <- (SNsets[i,"setCentreY"]+2) - spg[GridNum,"S Edge"]#
+				hitArea[i] <- hitLength[i]*setArea/setLength 	#
+				hitCase[i] <- 5#
+		# Check Case 6 to see if middle portion of set intersects sponge, but N and S ends#
+		# of set are outside sponge area	#
+		} else if (SNsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			  	  &SNsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			  	  &SNsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		     	  &SNsets[i,"setCentreY"] >= spg[GridNum,"S Edge"] ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1	#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 6#
+		} else {#
+			hitChar[i]     <- "NO"#
+			hitBin[i]      <- 0#
+		} #
+}#
+}#
+#
+hitVals <- cbind (hitBin, hitCase, hitLength, hitArea)
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	<- subset(sets, sets[,5]==3 & sets[,5]==13)#
+GridNum		<- sets[1,"setLocation"]#
+#
+if (nrow(EWsets)>0)#
+{#
+for ( i in 1:nrow(EWsets)) #
+{#
+#--------  Check 3 potential cases for WE set direction --------------------#
+		# Check Case1 to see if west point of set falls between west & east point of#
+		# of sponge area, and if set lies between N and S bounds of sponge #
+		if 		( 	  (EWsets[i,"setCentreX"]-2) >= spg[GridNum,"W Edge"] #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"] #
+			  		&  EWsets[i,"setCentreY"]	 <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum	,"E Edge"] - (EWsets[i,"setCentreX"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength # Multiply intersect length(km) by Set Area per km#
+			hitCase[i] <- 1#
+		# Check Case2 to see if East point of set falls between west & east point of#
+		# of sponge area and if set lies between N and S bounds of sponge 			#
+		} else if (	  (EWsets[i,"setCentreX"]+2) >= spg[GridNum,"W Edge"]  #
+			  		& (EWsets[i,"setCentreX"]-2) <= spg[GridNum,"E Edge"]#
+			  		&  EWsets[i,"setCentreY"]    <= spg[GridNum,"N Edge"]#
+		     	   	&  EWsets[i,"setCentreY"]	 >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- (EWsets[i,"setCentreX"]+2) - spg[GridNum,"W Edge"] #
+			hitArea[i] <- hitLength[i]*setArea/setLength#
+			hitCase[i] <- 2#
+		# Check Case3 to see if middle portion of set intersects sponge, but E and W ends#
+		# of set are outside sponge area		#
+		} else if (  EWsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			      &  EWsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			      &  EWsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		          &  EWsets[i,"setCentreY"] >= spg[GridNum,"S Edge"]  ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 3#
+		} else {#
+				hitChar[i]     <- "NO"#
+				hitBin[i]      <- 0#
+		} 			#
+}			#
+}#
+#
+if (nrow(SNsets)>0)#
+{	#
+for ( i in 1:nrow(SNsets)) 	#
+{			#
+#--------  Check 3 potential cases for SN set direction --------------------				#
+		# Check Case 4 to see if south point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge 		   #
+		if   (SNsets[i,"setCentreX"] 	 >= spg[GridNum,"W Edge"] #
+	  		 &SNsets[i,"setCentreX"] 	 <= spg[GridNum,"E Edge"]#
+	  		 &(SNsets[i,"setCentreY"]-2) <= spg[GridNum,"N Edge"]#
+     		 &(SNsets[i,"setCentreY"]-2) >= spg[GridNum,"S Edge"]) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1#
+			hitLength[i] <- spg[GridNum,"N Edge"] - (SNsets[i,"setCentreY"]-2)#
+			hitArea[i] <- hitLength[i]*setArea/setLength #
+			hitCase[i] <- 4#
+		# Check Case 5 to see if north point of set falls between North & South point of#
+		# of sponge area, and if set lies between N and S bounds of sponge   #
+		} else if (SNsets[i,"setCentreX"] 	  >= spg[GridNum,"W Edge"] #
+	  		 	  &SNsets[i,"setCentreX"] 	  <= spg[GridNum,"E Edge"]#
+	 	  		  &(SNsets[i,"setCentreY"]+2) <= spg[GridNum,"N Edge"]#
+	      		  &(SNsets[i,"setCentreY"]+2) >= spg[GridNum,"S Edge"] ) {#
+				hitChar[i]     <- "YES"#
+				hitBin[i]      <- 1#
+				hitLength[i] <- (SNsets[i,"setCentreY"]+2) - spg[GridNum,"S Edge"]#
+				hitArea[i] <- hitLength[i]*setArea/setLength 	#
+				hitCase[i] <- 5#
+		# Check Case 6 to see if middle portion of set intersects sponge, but N and S ends#
+		# of set are outside sponge area	#
+		} else if (SNsets[i,"setCentreX"] >= spg[GridNum,"W Edge"] #
+			  	  &SNsets[i,"setCentreX"] <= spg[GridNum,"E Edge"]#
+			  	  &SNsets[i,"setCentreY"] <= spg[GridNum,"N Edge"]#
+		     	  &SNsets[i,"setCentreY"] >= spg[GridNum,"S Edge"] ) {#
+			hitChar[i]     <- "YES"#
+			hitBin[i]      <- 1	#
+			hitLength[i] <- setLength#
+			hitArea[i] <- hitLength[i]*setArea/setLength	#
+			hitCase[i] <- 6#
+		} else {#
+			hitChar[i]     <- "NO"#
+			hitBin[i]      <- 0#
+		} #
+}#
+}#
+#
+hitVals <- cbind (hitBin, hitCase, hitLength, hitArea)
+hitBin
+hitVals
+hitVals <- cbind (GridNum, hitBin, hitCase, hitLength, hitArea)
+hitVals
+a<- (GridNum, hitBin, hitCase, hitLength, hitArea)
+a<- ("GridNum", "hitBin", "hitCase", "hitLength", "hitArea")
+a <- (1,2,3)
+a <- c(1,2,3)
+a<- c(GridNum, hitBin, hitCase, hitLength, hitArea)
+a
+a<- c("GridNum", "hitBin", "hitCase", "hitLength", "hitArea")
+a
+a <- vector()
+a
+hitVals
+a <- hitVals
+a
+REM 612 Modelling Progject#
+# Create Sponge Grid and Distribution for Bowie Seamount#
+# Beau Doherty - Feb 26, 2014#
+#
+rm(list=ls())#
+##-------- Initial Parameterization--------------------------------------------------#
+#
+## Create Matrix that contains x nd y coordinates for Bowie Seamount- 15 cells of 13 km by 13 km, so each cell is 169 sq. km total area of bowie zone 2 is 2538 sq. km.... Each cell will be numbered 1 through 15, moving from left to right in the grid. Row 1 shows info for most NW cell, row 5 most NE, row 10 most SW and row 15 most SE#
+#
+nCells <- 15#
+BowieData <-matrix(NA, nrow=nCells, byrow=T)  # matrix holds all values for each grid#
+# Define Fishing Paramters#
+trapRadius	<- 1  					# m#
+setLength  	<- 4  					# km#
+numTraps	<- 50 					# of traps per set#
+nSets		<- 100					# of sets per year#
+#
+trapSpace	<- setLength/(numTraps-1) 	# Assuming equal spacing#
+trapArea 	<- pi*trapRadius^2/1000000	# Area of 1 trap in km2#
+setArea 	<- numTraps * trapArea		# for now we ignore area of groundline#
+#
+# Assign Depths to each grid and spongeDensity to each grid#
+#
+#-------------- Assign Sponge Areas to different grid cells -------------------#
+#
+# Source Model for predicting sponge density and sample depths in each grid.#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/spongeModel2.r")#
+# Sourcing Set Distribution function#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/setDistribution.r")#
+# Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")#
+#
+# Create vectors that hold x and y values for each centre location of sponge. #
+#
+spgCentreX <- vector("numeric", length=nCells) # kms to East of most SW pt. in cell#
+spgCentreY <- vector("numeric", length=nCells) # kms to North of most SW pt. in cell#
+spgArea    <- vector("numeric", length=nCells) # Sq. km of sponge patch#
+spgLength  <- vector("numeric", length=nCells) # Side length of square sponge patch (km)#
+#
+# Sponge Density represents side length (in km) of each area of sponge. For simplicity, each sponge patch is modelled as a square. Need to distribute centre of sponge so that it does not extend into other cells#
+#spgDensity <- possSpongeDensity#
+#
+scalar		 <- 1#
+spgLength <- scalar + possSpongeDensity#
+spgArea   <- spgLength^2	#
+#
+# Assign random centre points for each sponge ground in each grid cell. Set so that sponge area#
+# cannot extend beyond one grid cell#
+#
+for ( i in 1:nCells) #
+{		#
+		possStartX <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreX[i] <- sample (possStartX, 1, replace=FALSE) # Randomly selects centre pt for X#
+		possStartY <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreY[i] <- sample (possStartY, 1, replace=FALSE) # Randomly selects centre pt for X#
+}#
+#
+spgAreaE <- vector ("numeric", nCells) # holds East bound of sponge area#
+spgAreaW <- vector ("numeric", nCells) # holds West bound of sponge area#
+spgAreaN <- vector ("numeric", nCells) # holds North bound of sponge area#
+spgAreaS <- vector ("numeric", nCells) # holds South bound of sponge area#
+#
+spgAreaE <- spgCentreX + spgLength/2#
+spgAreaW <- spgCentreX - spgLength/2#
+spgAreaN <- spgCentreY + spgLength/2#
+spgAreaS <- spgCentreY - spgLength/2#
+#
+spgAreaMat 		<- matrix (NA, nrow=15, ncol=4 )#
+spgAreaMat[,1] 	<- spgAreaE#
+spgAreaMat[,2] 	<- spgAreaW#
+spgAreaMat[,3] 	<- spgAreaN#
+spgAreaMat[,4] 	<- spgAreaS#
+#
+colnames(spgAreaMat) = c("E Edge","W Edge","N Edge","S Edge")#
+#
+spgVals <- cbind (spgAreaMat, spgArea, spgLength, spgCentreX, spgCentreY)#
+#
+# -------------------- year loop------------------------------------------------#
+# ------------------- Distribute Fishing Sets ------------------------------------#
+setVals <- setDistribution (nCells=nCells, nSets=nSets )#
+#
+# Create matrix to store hit information#
+hitVals <- vector()#
+#
+par (mfrow = c(3,5), mar=c(2,1,1,2))#
+#
+#cell loop#
+#
+for (i in 1:nCells)#
+{#
+	# effort#
+	plot (x=c(spgAreaW[i], spgAreaW[i], spgAreaE[i], spgAreaE[i], spgAreaW[i]), #
+		  y=c(spgAreaS[i], spgAreaN[i], spgAreaN[i], spgAreaS[i], spgAreaS[i]),#
+		  type = "l", col="firebrick1",main= paste("Grid#",i), xlab = "EW x coords", ylab = "SN y coords", #
+		  ylim=c(0,13), xlim=c(0,13), las=1 #
+		  )#
+		  data <- setVals[setVals[,"setLocation"]==i,] # selects rows from column Set Location that#
+		  if( nrow(data) > 0 )#
+	      {#
+			  hitVals2 <- hit (nCells, sets=data, spg=spgAreaMat, setArea, setLength)#
+			  hitVals  < rbind(hitVals,hitVals2)#
+			  for (j in 1:nrow(data))	#
+			  { #
+				  # check for hits#
+				if (data[j,5] !=3 & data[j,5] !=13)#
+			    {#
+					# get coordinates#
+					# send to hitFunc#
+					# save mortality#
+					# draw segments#
+				  	segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaE"], data[j,"setAreaS"] )#
+			    }#
+				else #
+					segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaW"], data[j,"setAreaN"] )#
+			  }	      	#
+	      } #
+		  # mortality#
+		  # update population#
+} # end cells#
+# save plot#
+#
+# end year
+Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")
+Source Model for predicting sponge density and sample depths in each grid.#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/spongeModel2.r")#
+# Sourcing Set Distribution function#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/setDistribution.r")
+Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")
+REM 612 Modelling Progject#
+# Create Sponge Grid and Distribution for Bowie Seamount#
+# Beau Doherty - Feb 26, 2014#
+#
+rm(list=ls())#
+##-------- Initial Parameterization--------------------------------------------------#
+#
+## Create Matrix that contains x nd y coordinates for Bowie Seamount- 15 cells of 13 km by 13 km, so each cell is 169 sq. km total area of bowie zone 2 is 2538 sq. km.... Each cell will be numbered 1 through 15, moving from left to right in the grid. Row 1 shows info for most NW cell, row 5 most NE, row 10 most SW and row 15 most SE#
+#
+nCells <- 15#
+BowieData <-matrix(NA, nrow=nCells, byrow=T)  # matrix holds all values for each grid#
+# Define Fishing Paramters#
+trapRadius	<- 1  					# m#
+setLength  	<- 4  					# km#
+numTraps	<- 50 					# of traps per set#
+nSets		<- 100					# of sets per year#
+#
+trapSpace	<- setLength/(numTraps-1) 	# Assuming equal spacing#
+trapArea 	<- pi*trapRadius^2/1000000	# Area of 1 trap in km2#
+setArea 	<- numTraps * trapArea		# for now we ignore area of groundline#
+#
+# Assign Depths to each grid and spongeDensity to each grid#
+#
+#-------------- Assign Sponge Areas to different grid cells -------------------#
+#
+# Source Model for predicting sponge density and sample depths in each grid.#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/spongeModel2.r")#
+# Sourcing Set Distribution function#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/setDistribution.r")#
+# Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")#
+#
+# Create vectors that hold x and y values for each centre location of sponge. #
+#
+spgCentreX <- vector("numeric", length=nCells) # kms to East of most SW pt. in cell#
+spgCentreY <- vector("numeric", length=nCells) # kms to North of most SW pt. in cell#
+spgArea    <- vector("numeric", length=nCells) # Sq. km of sponge patch#
+spgLength  <- vector("numeric", length=nCells) # Side length of square sponge patch (km)#
+#
+# Sponge Density represents side length (in km) of each area of sponge. For simplicity, each sponge patch is modelled as a square. Need to distribute centre of sponge so that it does not extend into other cells#
+#spgDensity <- possSpongeDensity#
+#
+scalar		 <- 1#
+spgLength <- scalar + possSpongeDensity#
+spgArea   <- spgLength^2	#
+#
+# Assign random centre points for each sponge ground in each grid cell. Set so that sponge area#
+# cannot extend beyond one grid cell#
+#
+for ( i in 1:nCells) #
+{		#
+		possStartX <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreX[i] <- sample (possStartX, 1, replace=FALSE) # Randomly selects centre pt for X#
+		possStartY <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreY[i] <- sample (possStartY, 1, replace=FALSE) # Randomly selects centre pt for X#
+}#
+#
+spgAreaE <- vector ("numeric", nCells) # holds East bound of sponge area#
+spgAreaW <- vector ("numeric", nCells) # holds West bound of sponge area#
+spgAreaN <- vector ("numeric", nCells) # holds North bound of sponge area#
+spgAreaS <- vector ("numeric", nCells) # holds South bound of sponge area#
+#
+spgAreaE <- spgCentreX + spgLength/2#
+spgAreaW <- spgCentreX - spgLength/2#
+spgAreaN <- spgCentreY + spgLength/2#
+spgAreaS <- spgCentreY - spgLength/2#
+#
+spgAreaMat 		<- matrix (NA, nrow=15, ncol=4 )#
+spgAreaMat[,1] 	<- spgAreaE#
+spgAreaMat[,2] 	<- spgAreaW#
+spgAreaMat[,3] 	<- spgAreaN#
+spgAreaMat[,4] 	<- spgAreaS#
+#
+colnames(spgAreaMat) = c("E Edge","W Edge","N Edge","S Edge")#
+#
+spgVals <- cbind (spgAreaMat, spgArea, spgLength, spgCentreX, spgCentreY)#
+#
+# -------------------- year loop------------------------------------------------#
+# ------------------- Distribute Fishing Sets ------------------------------------#
+setVals <- setDistribution (nCells=nCells, nSets=nSets )#
+#
+# Create matrix to store hit information#
+hitVals <- vector()#
+#
+par (mfrow = c(3,5), mar=c(2,1,1,2))#
+#
+#cell loop#
+#
+for (i in 1:nCells)#
+{#
+	# effort#
+	plot (x=c(spgAreaW[i], spgAreaW[i], spgAreaE[i], spgAreaE[i], spgAreaW[i]), #
+		  y=c(spgAreaS[i], spgAreaN[i], spgAreaN[i], spgAreaS[i], spgAreaS[i]),#
+		  type = "l", col="firebrick1",main= paste("Grid#",i), xlab = "EW x coords", ylab = "SN y coords", #
+		  ylim=c(0,13), xlim=c(0,13), las=1 #
+		  )#
+		  data <- setVals[setVals[,"setLocation"]==i,] # selects rows from column Set Location that#
+		  if( nrow(data) > 0 )#
+	      {#
+			  hitVals2 <- hit(nCells, sets=data, spg=spgAreaMat, setArea, setLength)#
+			  hitVals  < rbind(hitVals,hitVals2)#
+			  for (j in 1:nrow(data))	#
+			  { #
+				  # check for hits#
+				if (data[j,5] !=3 & data[j,5] !=13)#
+			    {#
+					# get coordinates#
+					# send to hitFunc#
+					# save mortality#
+					# draw segments#
+				  	segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaE"], data[j,"setAreaS"] )#
+			    }#
+				else #
+					segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaW"], data[j,"setAreaN"] )#
+			  }	      	#
+	      } #
+		  # mortality#
+		  # update population#
+} # end cells#
+# save plot#
+#
+# end year
+REM 612 Modelling Progject#
+# Create Sponge Grid and Distribution for Bowie Seamount#
+# Beau Doherty - Feb 26, 2014#
+#
+rm(list=ls())#
+##-------- Initial Parameterization--------------------------------------------------#
+#
+## Create Matrix that contains x nd y coordinates for Bowie Seamount- 15 cells of 13 km by 13 km, so each cell is 169 sq. km total area of bowie zone 2 is 2538 sq. km.... Each cell will be numbered 1 through 15, moving from left to right in the grid. Row 1 shows info for most NW cell, row 5 most NE, row 10 most SW and row 15 most SE#
+#
+nCells <- 15#
+BowieData <-matrix(NA, nrow=nCells, byrow=T)  # matrix holds all values for each grid#
+# Define Fishing Paramters#
+trapRadius	<- 1  					# m#
+setLength  	<- 4  					# km#
+numTraps	<- 50 					# of traps per set#
+nSets		<- 100					# of sets per year#
+#
+trapSpace	<- setLength/(numTraps-1) 	# Assuming equal spacing#
+trapArea 	<- pi*trapRadius^2/1000000	# Area of 1 trap in km2#
+setArea 	<- numTraps * trapArea		# for now we ignore area of groundline#
+#
+# Assign Depths to each grid and spongeDensity to each grid#
+#
+#-------------- Assign Sponge Areas to different grid cells -------------------#
+#
+# Source Model for predicting sponge density and sample depths in each grid.#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/spongeModel2.r")#
+# Sourcing Set Distribution function#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/setDistribution.r")#
+# Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")#
+#
+# Create vectors that hold x and y values for each centre location of sponge. #
+#
+spgCentreX <- vector("numeric", length=nCells) # kms to East of most SW pt. in cell#
+spgCentreY <- vector("numeric", length=nCells) # kms to North of most SW pt. in cell#
+spgArea    <- vector("numeric", length=nCells) # Sq. km of sponge patch#
+spgLength  <- vector("numeric", length=nCells) # Side length of square sponge patch (km)#
+#
+# Sponge Density represents side length (in km) of each area of sponge. For simplicity, each sponge patch is modelled as a square. Need to distribute centre of sponge so that it does not extend into other cells#
+#spgDensity <- possSpongeDensity#
+#
+scalar		 <- 1#
+spgLength <- scalar + possSpongeDensity#
+spgArea   <- spgLength^2	#
+#
+# Assign random centre points for each sponge ground in each grid cell. Set so that sponge area#
+# cannot extend beyond one grid cell#
+#
+for ( i in 1:nCells) #
+{		#
+		possStartX <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreX[i] <- sample (possStartX, 1, replace=FALSE) # Randomly selects centre pt for X#
+		possStartY <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreY[i] <- sample (possStartY, 1, replace=FALSE) # Randomly selects centre pt for X#
+}#
+#
+spgAreaE <- vector ("numeric", nCells) # holds East bound of sponge area#
+spgAreaW <- vector ("numeric", nCells) # holds West bound of sponge area#
+spgAreaN <- vector ("numeric", nCells) # holds North bound of sponge area#
+spgAreaS <- vector ("numeric", nCells) # holds South bound of sponge area#
+#
+spgAreaE <- spgCentreX + spgLength/2#
+spgAreaW <- spgCentreX - spgLength/2#
+spgAreaN <- spgCentreY + spgLength/2#
+spgAreaS <- spgCentreY - spgLength/2#
+#
+spgAreaMat 		<- matrix (NA, nrow=15, ncol=4 )#
+spgAreaMat[,1] 	<- spgAreaE#
+spgAreaMat[,2] 	<- spgAreaW#
+spgAreaMat[,3] 	<- spgAreaN#
+spgAreaMat[,4] 	<- spgAreaS#
+#
+colnames(spgAreaMat) = c("E Edge","W Edge","N Edge","S Edge")#
+#
+spgVals <- cbind (spgAreaMat, spgArea, spgLength, spgCentreX, spgCentreY)#
+#
+# -------------------- year loop------------------------------------------------#
+# ------------------- Distribute Fishing Sets ------------------------------------#
+setVals <- setDistribution (nCells=nCells, nSets=nSets )#
+#
+# Create matrix to store hit information#
+hitVals <- vector()#
+#
+par (mfrow = c(3,5), mar=c(2,1,1,2))#
+#
+#cell loop#
+#
+for (i in 1:nCells)#
+{#
+	# effort#
+	plot (x=c(spgAreaW[i], spgAreaW[i], spgAreaE[i], spgAreaE[i], spgAreaW[i]), #
+		  y=c(spgAreaS[i], spgAreaN[i], spgAreaN[i], spgAreaS[i], spgAreaS[i]),#
+		  type = "l", col="firebrick1",main= paste("Grid#",i), xlab = "EW x coords", ylab = "SN y coords", #
+		  ylim=c(0,13), xlim=c(0,13), las=1 #
+		  )#
+		  data <- setVals[setVals[,"setLocation"]==i,] # selects rows from column Set Location that#
+		  if( nrow(data) > 0 )#
+	      {#
+			  hitVals2 <- hit(nCells, sets=data, spg=spgAreaMat, setArea, setLength)#
+			  hitVals  <- rbind(hitVals,hitVals2)#
+			  for (j in 1:nrow(data))	#
+			  { #
+				  # check for hits#
+				if (data[j,5] !=3 & data[j,5] !=13)#
+			    {#
+					# get coordinates#
+					# send to hitFunc#
+					# save mortality#
+					# draw segments#
+				  	segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaE"], data[j,"setAreaS"] )#
+			    }#
+				else #
+					segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaW"], data[j,"setAreaN"] )#
+			  }	      	#
+	      } #
+		  # mortality#
+		  # update population#
+} # end cells#
+# save plot#
+#
+# end year
+hitVals
+head(hitVals)
+a  <- subset(hitVals, hitVals[,2]==1)
+a
+spgArea[7]
+spgArea[5]
+spgMatArea[7,]
+spgAreaMat[7,]
+data <- setVals[setVals[,"setLocation"]==3,] # selects
+data
+a <- hit(nCells, sets=data, spg=spgAreaMat, setArea, setLength)
+a
+sets <- data
+sets
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+SNsets   	<- subset(sets, sets[,5]==3 & sets[,5]==13)#
+GridNum		<- sets[1,"setLocation"]
+SNsets
+EWsets
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+GridNum		<- sets[1,"setLocation"]#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+if (GridNum==5)#
+SNsets   	<- subset(sets, sets[,5]==3 )#
+else if (GridNum==5)#
+SNsets   	<- subset(sets, sets[,5]==13)
+GridNum		<- sets[1,"setLocation"]#
+EWsets   	<- subset(sets, sets[,5]!=3 & sets[,5]!=13)#
+if (GridNum==5)#
+SNsets   	<- subset(sets, sets[,5]==3 )#
+if (GridNum==13)#
+SNsets   	<- subset(sets, sets[,5]==13)
+SNsets
+a <-subset(sets, sets[,5])
+sets
+if (GridNum==5)#
+SNsets   	<- sets#
+else if (GridNum==13)#
+SNsets   	<- sets#
+else (GridNum)#
+EWsets   	<- sets
+if (GridNum==5)#
+{SNsets   	<- sets} #
+else if {(GridNum==13)#
+{SNsets   	<- sets }#
+else (GridNum)#
+{EWsets   	<- sets}
+GridNum==3
+GridNum==5
+if (GridNum==5)#
+{SNsets   	<- sets} #
+else if {(GridNum==13)#
+{SNsets   	<- sets }#
+else#
+{EWsets   	<- sets}
+if (GridNum==5)#
+{SNsets   	<- sets}
+SNsets
+if (GridNum==5)#
+{SNsets   	<- sets} #
+else if {(GridNum==13)#
+{SNsets   	<- sets }#
+else#
+{EWsets   	<- sets}
+REM 612 Modelling Progject#
+# Create Sponge Grid and Distribution for Bowie Seamount#
+# Beau Doherty - Feb 26, 2014#
+#
+rm(list=ls())#
+##-------- Initial Parameterization--------------------------------------------------#
+#
+## Create Matrix that contains x nd y coordinates for Bowie Seamount- 15 cells of 13 km by 13 km, so each cell is 169 sq. km total area of bowie zone 2 is 2538 sq. km.... Each cell will be numbered 1 through 15, moving from left to right in the grid. Row 1 shows info for most NW cell, row 5 most NE, row 10 most SW and row 15 most SE#
+#
+nCells <- 15#
+BowieData <-matrix(NA, nrow=nCells, byrow=T)  # matrix holds all values for each grid#
+# Define Fishing Paramters#
+trapRadius	<- 1  					# m#
+setLength  	<- 4  					# km#
+numTraps	<- 50 					# of traps per set#
+nSets		<- 100					# of sets per year#
+#
+trapSpace	<- setLength/(numTraps-1) 	# Assuming equal spacing#
+trapArea 	<- pi*trapRadius^2/1000000	# Area of 1 trap in km2#
+setArea 	<- numTraps * trapArea		# for now we ignore area of groundline#
+#
+# Assign Depths to each grid and spongeDensity to each grid#
+#
+#-------------- Assign Sponge Areas to different grid cells -------------------#
+#
+# Source Model for predicting sponge density and sample depths in each grid.#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/spongeModel2.r")#
+# Sourcing Set Distribution function#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/setDistribution.r")#
+# Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")#
+#
+# Create vectors that hold x and y values for each centre location of sponge. #
+#
+spgCentreX <- vector("numeric", length=nCells) # kms to East of most SW pt. in cell#
+spgCentreY <- vector("numeric", length=nCells) # kms to North of most SW pt. in cell#
+spgArea    <- vector("numeric", length=nCells) # Sq. km of sponge patch#
+spgLength  <- vector("numeric", length=nCells) # Side length of square sponge patch (km)#
+#
+# Sponge Density represents side length (in km) of each area of sponge. For simplicity, each sponge patch is modelled as a square. Need to distribute centre of sponge so that it does not extend into other cells#
+#spgDensity <- possSpongeDensity#
+#
+scalar		 <- 1#
+spgLength <- scalar + possSpongeDensity#
+spgArea   <- spgLength^2	#
+#
+# Assign random centre points for each sponge ground in each grid cell. Set so that sponge area#
+# cannot extend beyond one grid cell#
+#
+for ( i in 1:nCells) #
+{		#
+		possStartX <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreX[i] <- sample (possStartX, 1, replace=FALSE) # Randomly selects centre pt for X#
+		possStartY <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreY[i] <- sample (possStartY, 1, replace=FALSE) # Randomly selects centre pt for X#
+}#
+#
+spgAreaE <- vector ("numeric", nCells) # holds East bound of sponge area#
+spgAreaW <- vector ("numeric", nCells) # holds West bound of sponge area#
+spgAreaN <- vector ("numeric", nCells) # holds North bound of sponge area#
+spgAreaS <- vector ("numeric", nCells) # holds South bound of sponge area#
+#
+spgAreaE <- spgCentreX + spgLength/2#
+spgAreaW <- spgCentreX - spgLength/2#
+spgAreaN <- spgCentreY + spgLength/2#
+spgAreaS <- spgCentreY - spgLength/2#
+#
+spgAreaMat 		<- matrix (NA, nrow=15, ncol=4 )#
+spgAreaMat[,1] 	<- spgAreaE#
+spgAreaMat[,2] 	<- spgAreaW#
+spgAreaMat[,3] 	<- spgAreaN#
+spgAreaMat[,4] 	<- spgAreaS#
+#
+colnames(spgAreaMat) = c("E Edge","W Edge","N Edge","S Edge")#
+#
+spgVals <- cbind (spgAreaMat, spgArea, spgLength, spgCentreX, spgCentreY)#
+#
+# -------------------- year loop------------------------------------------------#
+# ------------------- Distribute Fishing Sets ------------------------------------#
+setVals <- setDistribution (nCells=nCells, nSets=nSets )#
+#
+# Create matrix to store hit information#
+hitVals <- vector()#
+#
+par (mfrow = c(3,5), mar=c(2,1,1,2))#
+#
+#cell loop#
+#
+for (i in 1:nCells)#
+{#
+	# effort#
+	plot (x=c(spgAreaW[i], spgAreaW[i], spgAreaE[i], spgAreaE[i], spgAreaW[i]), #
+		  y=c(spgAreaS[i], spgAreaN[i], spgAreaN[i], spgAreaS[i], spgAreaS[i]),#
+		  type = "l", col="firebrick1",main= paste("Grid#",i), xlab = "EW x coords", ylab = "SN y coords", #
+		  ylim=c(0,13), xlim=c(0,13), las=1 #
+		  )#
+		  data <- setVals[setVals[,"setLocation"]==i,] # selects rows from column Set Location that#
+		  if( nrow(data) > 0 )#
+	      {#
+			  hitVals2 <- hit(nCells, sets=data, spg=spgAreaMat, setArea, setLength)#
+			  hitVals  <- rbind(hitVals,hitVals2)#
+			  for (j in 1:nrow(data))	#
+			  { #
+				  # check for hits#
+				if (data[j,5] !=3 & data[j,5] !=13)#
+			    {#
+					# get coordinates#
+					# send to hitFunc#
+					# save mortality#
+					# draw segments#
+				  	segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaE"], data[j,"setAreaS"] )#
+			    }#
+				else #
+					segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaW"], data[j,"setAreaN"] )#
+			  }	      	#
+	      } #
+		  # mortality#
+		  # update population#
+} # end cells#
+# save plot#
+#
+# end year
+Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")
+sets=data
+sets
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+GridNum		<- sets[1,"setLocation"]
+GridNum
+sets
+if (GridNum==5){#
+SNsets<- sets #
+#
+}else if (GridNum==13){#
+SNsets<- sets#
+}else {#
+EWsets<- sets#
+}
+EWsets
+SNsets
+class(EWsets)
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+GridNum		<- sets[1,"setLocation"]#
+EWsets		<- matrix()#
+SNsets		<- matrix()
+if (GridNum==5){#
+SNsets<- sets #
+#
+}else if (GridNum==13){#
+SNsets<- sets#
+}else {#
+EWsets<- sets#
+}
+EWsets
+SWsets
+SNsets
+REM 612 Modelling Progject#
+# Create Sponge Grid and Distribution for Bowie Seamount#
+# Beau Doherty - Feb 26, 2014#
+#
+rm(list=ls())#
+##-------- Initial Parameterization--------------------------------------------------#
+#
+## Create Matrix that contains x nd y coordinates for Bowie Seamount- 15 cells of 13 km by 13 km, so each cell is 169 sq. km total area of bowie zone 2 is 2538 sq. km.... Each cell will be numbered 1 through 15, moving from left to right in the grid. Row 1 shows info for most NW cell, row 5 most NE, row 10 most SW and row 15 most SE#
+#
+nCells <- 15#
+BowieData <-matrix(NA, nrow=nCells, byrow=T)  # matrix holds all values for each grid#
+# Define Fishing Paramters#
+trapRadius	<- 1  					# m#
+setLength  	<- 4  					# km#
+numTraps	<- 50 					# of traps per set#
+nSets		<- 100					# of sets per year#
+#
+trapSpace	<- setLength/(numTraps-1) 	# Assuming equal spacing#
+trapArea 	<- pi*trapRadius^2/1000000	# Area of 1 trap in km2#
+setArea 	<- numTraps * trapArea		# for now we ignore area of groundline#
+#
+# Assign Depths to each grid and spongeDensity to each grid#
+#
+#-------------- Assign Sponge Areas to different grid cells -------------------#
+#
+# Source Model for predicting sponge density and sample depths in each grid.#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/spongeModel2.r")#
+# Sourcing Set Distribution function#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/setDistribution.r")#
+# Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")#
+#
+# Create vectors that hold x and y values for each centre location of sponge. #
+#
+spgCentreX <- vector("numeric", length=nCells) # kms to East of most SW pt. in cell#
+spgCentreY <- vector("numeric", length=nCells) # kms to North of most SW pt. in cell#
+spgArea    <- vector("numeric", length=nCells) # Sq. km of sponge patch#
+spgLength  <- vector("numeric", length=nCells) # Side length of square sponge patch (km)#
+#
+# Sponge Density represents side length (in km) of each area of sponge. For simplicity, each sponge patch is modelled as a square. Need to distribute centre of sponge so that it does not extend into other cells#
+#spgDensity <- possSpongeDensity#
+#
+scalar		 <- 1#
+spgLength <- scalar + possSpongeDensity#
+spgArea   <- spgLength^2	#
+#
+# Assign random centre points for each sponge ground in each grid cell. Set so that sponge area#
+# cannot extend beyond one grid cell#
+#
+for ( i in 1:nCells) #
+{		#
+		possStartX <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreX[i] <- sample (possStartX, 1, replace=FALSE) # Randomly selects centre pt for X#
+		possStartY <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreY[i] <- sample (possStartY, 1, replace=FALSE) # Randomly selects centre pt for X#
+}#
+#
+spgAreaE <- vector ("numeric", nCells) # holds East bound of sponge area#
+spgAreaW <- vector ("numeric", nCells) # holds West bound of sponge area#
+spgAreaN <- vector ("numeric", nCells) # holds North bound of sponge area#
+spgAreaS <- vector ("numeric", nCells) # holds South bound of sponge area#
+#
+spgAreaE <- spgCentreX + spgLength/2#
+spgAreaW <- spgCentreX - spgLength/2#
+spgAreaN <- spgCentreY + spgLength/2#
+spgAreaS <- spgCentreY - spgLength/2#
+#
+spgAreaMat 		<- matrix (NA, nrow=15, ncol=4 )#
+spgAreaMat[,1] 	<- spgAreaE#
+spgAreaMat[,2] 	<- spgAreaW#
+spgAreaMat[,3] 	<- spgAreaN#
+spgAreaMat[,4] 	<- spgAreaS#
+#
+colnames(spgAreaMat) = c("E Edge","W Edge","N Edge","S Edge")#
+#
+spgVals <- cbind (spgAreaMat, spgArea, spgLength, spgCentreX, spgCentreY)#
+#
+# -------------------- year loop------------------------------------------------#
+# ------------------- Distribute Fishing Sets ------------------------------------#
+setVals <- setDistribution (nCells=nCells, nSets=nSets )#
+#
+# Create matrix to store hit information#
+hitVals <- vector()#
+#
+par (mfrow = c(3,5), mar=c(2,1,1,2))#
+#
+#cell loop#
+#
+for (i in 1:nCells)#
+{#
+	# effort#
+	plot (x=c(spgAreaW[i], spgAreaW[i], spgAreaE[i], spgAreaE[i], spgAreaW[i]), #
+		  y=c(spgAreaS[i], spgAreaN[i], spgAreaN[i], spgAreaS[i], spgAreaS[i]),#
+		  type = "l", col="firebrick1",main= paste("Grid#",i), xlab = "EW x coords", ylab = "SN y coords", #
+		  ylim=c(0,13), xlim=c(0,13), las=1 #
+		  )#
+		  data <- setVals[setVals[,"setLocation"]==i,] # selects rows from column Set Location that#
+		  if( nrow(data) > 0 )#
+	      {#
+			  hitVals2 <- hit(nCells, sets=data, spg=spgAreaMat, setArea, setLength)#
+			  hitVals  <- rbind(hitVals,hitVals2)#
+			  for (j in 1:nrow(data))	#
+			  { #
+				  # check for hits#
+				if (data[j,5] !=3 & data[j,5] !=13)#
+			    {#
+					# get coordinates#
+					# send to hitFunc#
+					# save mortality#
+					# draw segments#
+				  	segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaE"], data[j,"setAreaS"] )#
+			    }#
+				else #
+					segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaW"], data[j,"setAreaN"] )#
+			  }	      	#
+	      } #
+		  # mortality#
+		  # update population#
+} # end cells#
+# save plot#
+#
+# end year
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+GridNum		<- sets[1,"setLocation"]#
+EWcheck		<- 0#
+SNcheck		<- 0#
+#
+if (GridNum==5){#
+SNsets<- sets#
+SNcheck <- 1#
+#
+}else if (GridNum==13){#
+SNsets<- sets#
+SNcheck <-1#
+}else {#
+EWsets<- sets#
+EWcheck<-1#
+}
+sets
+sets = data
+sets
+hitChar  	<- vector ("character", nrow(sets)) # Does set hit sponge - "yes" or "no"#
+hitBin   	<- vector ("numeric", nrow(sets)) # Does set hit sponge - "yes"=1 or "no"=0#
+hitLength	<- vector ("numeric", nrow(sets)) # holds distance that set intersects sponge#
+hitArea  	<- vector ("numeric", nrow(sets)) # holds area of sponge hit#
+hitCase  	<- vector ("numeric", nrow(sets)) # Describes type of hit Case 1-6#
+#
+GridNum		<- sets[1,"setLocation"]#
+EWcheck		<- 0#
+SNcheck		<- 0#
+#
+if (GridNum==5){#
+SNsets<- sets#
+SNcheck <- 1#
+#
+}else if (GridNum==13){#
+SNsets<- sets#
+SNcheck <-1#
+}else {#
+EWsets<- sets#
+EWcheck<-1#
+}
+EWcheck
+EWcheck==0
+EWcheck==1
+REM 612 Modelling Progject#
+# Create Sponge Grid and Distribution for Bowie Seamount#
+# Beau Doherty - Feb 26, 2014#
+#
+rm(list=ls())#
+##-------- Initial Parameterization--------------------------------------------------#
+#
+## Create Matrix that contains x nd y coordinates for Bowie Seamount- 15 cells of 13 km by 13 km, so each cell is 169 sq. km total area of bowie zone 2 is 2538 sq. km.... Each cell will be numbered 1 through 15, moving from left to right in the grid. Row 1 shows info for most NW cell, row 5 most NE, row 10 most SW and row 15 most SE#
+#
+nCells <- 15#
+BowieData <-matrix(NA, nrow=nCells, byrow=T)  # matrix holds all values for each grid#
+# Define Fishing Paramters#
+trapRadius	<- 1  					# m#
+setLength  	<- 4  					# km#
+numTraps	<- 50 					# of traps per set#
+nSets		<- 100					# of sets per year#
+#
+trapSpace	<- setLength/(numTraps-1) 	# Assuming equal spacing#
+trapArea 	<- pi*trapRadius^2/1000000	# Area of 1 trap in km2#
+setArea 	<- numTraps * trapArea		# for now we ignore area of groundline#
+#
+# Assign Depths to each grid and spongeDensity to each grid#
+#
+#-------------- Assign Sponge Areas to different grid cells -------------------#
+#
+# Source Model for predicting sponge density and sample depths in each grid.#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/spongeModel2.r")#
+# Sourcing Set Distribution function#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/setDistribution.r")#
+# Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")#
+#
+# Create vectors that hold x and y values for each centre location of sponge. #
+#
+spgCentreX <- vector("numeric", length=nCells) # kms to East of most SW pt. in cell#
+spgCentreY <- vector("numeric", length=nCells) # kms to North of most SW pt. in cell#
+spgArea    <- vector("numeric", length=nCells) # Sq. km of sponge patch#
+spgLength  <- vector("numeric", length=nCells) # Side length of square sponge patch (km)#
+#
+# Sponge Density represents side length (in km) of each area of sponge. For simplicity, each sponge patch is modelled as a square. Need to distribute centre of sponge so that it does not extend into other cells#
+#spgDensity <- possSpongeDensity#
+#
+scalar		 <- 1#
+spgLength <- scalar + possSpongeDensity#
+spgArea   <- spgLength^2	#
+#
+# Assign random centre points for each sponge ground in each grid cell. Set so that sponge area#
+# cannot extend beyond one grid cell#
+#
+for ( i in 1:nCells) #
+{		#
+		possStartX <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreX[i] <- sample (possStartX, 1, replace=FALSE) # Randomly selects centre pt for X#
+		possStartY <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreY[i] <- sample (possStartY, 1, replace=FALSE) # Randomly selects centre pt for X#
+}#
+#
+spgAreaE <- vector ("numeric", nCells) # holds East bound of sponge area#
+spgAreaW <- vector ("numeric", nCells) # holds West bound of sponge area#
+spgAreaN <- vector ("numeric", nCells) # holds North bound of sponge area#
+spgAreaS <- vector ("numeric", nCells) # holds South bound of sponge area#
+#
+spgAreaE <- spgCentreX + spgLength/2#
+spgAreaW <- spgCentreX - spgLength/2#
+spgAreaN <- spgCentreY + spgLength/2#
+spgAreaS <- spgCentreY - spgLength/2#
+#
+spgAreaMat 		<- matrix (NA, nrow=15, ncol=4 )#
+spgAreaMat[,1] 	<- spgAreaE#
+spgAreaMat[,2] 	<- spgAreaW#
+spgAreaMat[,3] 	<- spgAreaN#
+spgAreaMat[,4] 	<- spgAreaS#
+#
+colnames(spgAreaMat) = c("E Edge","W Edge","N Edge","S Edge")#
+#
+spgVals <- cbind (spgAreaMat, spgArea, spgLength, spgCentreX, spgCentreY)#
+#
+# -------------------- year loop------------------------------------------------#
+# ------------------- Distribute Fishing Sets ------------------------------------#
+setVals <- setDistribution (nCells=nCells, nSets=nSets )#
+#
+# Create matrix to store hit information#
+hitVals <- vector()#
+#
+par (mfrow = c(3,5), mar=c(2,1,1,2))#
+#
+#cell loop#
+#
+for (i in 1:nCells)#
+{#
+	# effort#
+	plot (x=c(spgAreaW[i], spgAreaW[i], spgAreaE[i], spgAreaE[i], spgAreaW[i]), #
+		  y=c(spgAreaS[i], spgAreaN[i], spgAreaN[i], spgAreaS[i], spgAreaS[i]),#
+		  type = "l", col="firebrick1",main= paste("Grid#",i), xlab = "EW x coords", ylab = "SN y coords", #
+		  ylim=c(0,13), xlim=c(0,13), las=1 #
+		  )#
+		  data <- setVals[setVals[,"setLocation"]==i,] # selects rows from column Set Location that#
+		  if( nrow(data) > 0 )#
+	      {#
+			  hitVals2 <- hit(nCells, sets=data, spg=spgAreaMat, setArea, setLength)#
+			  hitVals  <- rbind(hitVals,hitVals2)#
+			  for (j in 1:nrow(data))	#
+			  { #
+				  # check for hits#
+				if (data[j,5] !=3 & data[j,5] !=13)#
+			    {#
+					# get coordinates#
+					# send to hitFunc#
+					# save mortality#
+					# draw segments#
+				  	segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaE"], data[j,"setAreaS"] )#
+			    }#
+				else #
+					segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaW"], data[j,"setAreaN"] )#
+			  }	      	#
+	      } #
+		  # mortality#
+		  # update population#
+} # end cells#
+# save plot#
+#
+# end year
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")
+REM 612 Modelling Progject#
+# Create Sponge Grid and Distribution for Bowie Seamount#
+# Beau Doherty - Feb 26, 2014#
+#
+rm(list=ls())#
+##-------- Initial Parameterization--------------------------------------------------#
+#
+## Create Matrix that contains x nd y coordinates for Bowie Seamount- 15 cells of 13 km by 13 km, so each cell is 169 sq. km total area of bowie zone 2 is 2538 sq. km.... Each cell will be numbered 1 through 15, moving from left to right in the grid. Row 1 shows info for most NW cell, row 5 most NE, row 10 most SW and row 15 most SE#
+#
+nCells <- 15#
+BowieData <-matrix(NA, nrow=nCells, byrow=T)  # matrix holds all values for each grid#
+# Define Fishing Paramters#
+trapRadius	<- 1  					# m#
+setLength  	<- 4  					# km#
+numTraps	<- 50 					# of traps per set#
+nSets		<- 100					# of sets per year#
+#
+trapSpace	<- setLength/(numTraps-1) 	# Assuming equal spacing#
+trapArea 	<- pi*trapRadius^2/1000000	# Area of 1 trap in km2#
+setArea 	<- numTraps * trapArea		# for now we ignore area of groundline#
+#
+# Assign Depths to each grid and spongeDensity to each grid#
+#
+#-------------- Assign Sponge Areas to different grid cells -------------------#
+#
+# Source Model for predicting sponge density and sample depths in each grid.#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/spongeModel2.r")#
+# Sourcing Set Distribution function#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/setDistribution.r")#
+# Source function to detect if sets intersect sponge grounds#
+source("/Users/beaudoherty/Documents/SFU/REM 612/Modelling Project/R working directory/Hit.r")#
+#
+# Create vectors that hold x and y values for each centre location of sponge. #
+#
+spgCentreX <- vector("numeric", length=nCells) # kms to East of most SW pt. in cell#
+spgCentreY <- vector("numeric", length=nCells) # kms to North of most SW pt. in cell#
+spgArea    <- vector("numeric", length=nCells) # Sq. km of sponge patch#
+spgLength  <- vector("numeric", length=nCells) # Side length of square sponge patch (km)#
+#
+# Sponge Density represents side length (in km) of each area of sponge. For simplicity, each sponge patch is modelled as a square. Need to distribute centre of sponge so that it does not extend into other cells#
+#spgDensity <- possSpongeDensity#
+#
+scalar		 <- 1#
+spgLength <- scalar + possSpongeDensity#
+spgArea   <- spgLength^2	#
+#
+# Assign random centre points for each sponge ground in each grid cell. Set so that sponge area#
+# cannot extend beyond one grid cell#
+#
+for ( i in 1:nCells) #
+{		#
+		possStartX <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreX[i] <- sample (possStartX, 1, replace=FALSE) # Randomly selects centre pt for X#
+		possStartY <- seq (spgLength[i]/2, 13 - spgLength[i]/2, by=0.5)  #sets range of possible start points for centre #
+		spgCentreY[i] <- sample (possStartY, 1, replace=FALSE) # Randomly selects centre pt for X#
+}#
+#
+spgAreaE <- vector ("numeric", nCells) # holds East bound of sponge area#
+spgAreaW <- vector ("numeric", nCells) # holds West bound of sponge area#
+spgAreaN <- vector ("numeric", nCells) # holds North bound of sponge area#
+spgAreaS <- vector ("numeric", nCells) # holds South bound of sponge area#
+#
+spgAreaE <- spgCentreX + spgLength/2#
+spgAreaW <- spgCentreX - spgLength/2#
+spgAreaN <- spgCentreY + spgLength/2#
+spgAreaS <- spgCentreY - spgLength/2#
+#
+spgAreaMat 		<- matrix (NA, nrow=15, ncol=4 )#
+spgAreaMat[,1] 	<- spgAreaE#
+spgAreaMat[,2] 	<- spgAreaW#
+spgAreaMat[,3] 	<- spgAreaN#
+spgAreaMat[,4] 	<- spgAreaS#
+#
+colnames(spgAreaMat) = c("E Edge","W Edge","N Edge","S Edge")#
+#
+spgVals <- cbind (spgAreaMat, spgArea, spgLength, spgCentreX, spgCentreY)#
+#
+# -------------------- year loop------------------------------------------------#
+# ------------------- Distribute Fishing Sets ------------------------------------#
+setVals <- setDistribution (nCells=nCells, nSets=nSets )#
+#
+# Create matrix to store hit information#
+hitVals <- vector()#
+#
+par (mfrow = c(3,5), mar=c(2,1,1,2))#
+#
+#cell loop#
+#
+for (i in 1:nCells)#
+{#
+	# effort#
+	plot (x=c(spgAreaW[i], spgAreaW[i], spgAreaE[i], spgAreaE[i], spgAreaW[i]), #
+		  y=c(spgAreaS[i], spgAreaN[i], spgAreaN[i], spgAreaS[i], spgAreaS[i]),#
+		  type = "l", col="firebrick1",main= paste("Grid#",i), xlab = "EW x coords", ylab = "SN y coords", #
+		  ylim=c(0,13), xlim=c(0,13), las=1 #
+		  )#
+		  data <- setVals[setVals[,"setLocation"]==i,] # selects rows from column Set Location that#
+		  if( nrow(data) > 0 )#
+	      {#
+			  hitVals2 <- hit(nCells, sets=data, spg=spgAreaMat, setArea, setLength)#
+			  hitVals  <- rbind(hitVals,hitVals2)#
+			  for (j in 1:nrow(data))	#
+			  { #
+				  # check for hits#
+				if (data[j,5] !=3 & data[j,5] !=13)#
+			    {#
+					# get coordinates#
+					# send to hitFunc#
+					# save mortality#
+					# draw segments#
+				  	segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaE"], data[j,"setAreaS"] )#
+			    }#
+				else #
+					segments (data[j,"setAreaW"], data[j,"setAreaS"],data[j,"setAreaW"], data[j,"setAreaN"] )#
+			  }	      	#
+	      } #
+		  # mortality#
+		  # update population#
+} # end cells#
+# save plot#
+#
+# end year
+hitVals
+a <- seq(400:1000, by=1)
+a <- seq(400,1000, by=1)
+a
+sample(a, 1)
+sample(a,7)
+source("/Users/beaudoherty/Documents/SFU/REM 699/sablefish data/DohertyCoxData/2012SurveyAccel.R")
+vals
+vals$StartTime[1]
+vals$StartTime
+vals$Set[1]
+is(vals)
+for(i in min(uniqueSets):max(uniqueSets))	#
+{#
+#
+if (i %in% uniqueSets)#
+{#
+	x2 = subset(x1,x1$Set==i)#
+	uniqueTraps = unique(x2$Trap)	#
+	for(n in min(uniqueTraps): max(uniqueTraps))#
+	{#
+		x3 = subset(x2,x2$Trap==n)#
+	if (n %in% uniqueTraps)#
+	{#
+		x3$AccVectorSum	= (sqrt((x3$XAccel^2)+(x3$YAccel^2)+(x3$ZAccel^2)))#
+		# Separate into 3 time periods (1-deployment, 2-soak, 3-retrieval)#
+		x3rows = nrow(x3)#
+		x3.1 = x3[1:1440,]#
+		x3.2 = x3[1441:(x3rows-1440),]#
+		x3.3 = x3[(x3rows-1439):x3rows,]#
+		ac.var1	 = var(x3.1$AccVectorSum)	#
+		ac.mean1 = mean(x3.1$AccVectorSum)#
+		ac.var2	 = var(x3.2$AccVectorSum)	#
+		ac.mean2 = mean(x3.2$AccVectorSum)#
+		ac.var3	 = var(x3.3$AccVectorSum)	#
+		ac.mean3 = mean(x3.3$AccVectorSum)#
+		x3.2rows = nrow(x3.2)#
+		vals1 = c(i, n, 1, ac.mean1, ac.var1)#
+		vals2 = c(i, n, 2, ac.mean2, ac.var2)#
+		vals3 = c(i, n, 3, ac.mean3, ac.var3)#
+		#vals1 = c(i, n, x3.1$DateTime[1], x3.1$DateTime[1440], 1, ac.mean1, ac.var1)#
+		#vals2 = c(i, n, x3.2$DateTime[1], x3.2$DateTime[x3.2rows], 2, ac.mean2, ac.var2)#
+		#vals3 = c(i, n, x3.3$DateTime[1], x3.3$DateTime[1440], 3, ac.mean3, ac.var3)#
+		vals  = rbind (vals,vals1,vals2,vals3)#
+	}#
+	}#
+}#
+}
+warnings()
+vals = 0
+vals
+Analyze accelerometer data from 2012 sablefish survey#
+#
+rm(list=ls())#
+#
+setwd("/Users/beaudoherty/Documents/SFU/REM 699/sablefish data/DohertyCoxData")#
+#
+x1= read.csv("Accelerometer_Survey_2012.csv", sep=",")	#Read-in csv#
+y1= read.csv("Sensor_Fishing_Events.csv", sep=",")#
+#
+uniqueSets = unique(x1$Set)#
+vals = vector ('numeric')#
+#
+for(i in min(uniqueSets):max(uniqueSets))	#
+{#
+#
+if (i %in% uniqueSets)#
+{#
+	x2 = subset(x1,x1$Set==i)#
+	uniqueTraps = unique(x2$Trap)	#
+	for(n in min(uniqueTraps): max(uniqueTraps))#
+	{#
+		x3 = subset(x2,x2$Trap==n)#
+	if (n %in% uniqueTraps)#
+	{#
+		x3$AccVectorSum	= (sqrt((x3$XAccel^2)+(x3$YAccel^2)+(x3$ZAccel^2)))#
+		# Separate into 3 time periods (1-deployment, 2-soak, 3-retrieval)#
+		x3rows = nrow(x3)#
+		x3.1 = x3[1:1440,]#
+		x3.2 = x3[1441:(x3rows-1440),]#
+		x3.3 = x3[(x3rows-1439):x3rows,]#
+		ac.var1	 = var(x3.1$AccVectorSum)	#
+		ac.mean1 = mean(x3.1$AccVectorSum)#
+		ac.var2	 = var(x3.2$AccVectorSum)	#
+		ac.mean2 = mean(x3.2$AccVectorSum)#
+		ac.var3	 = var(x3.3$AccVectorSum)	#
+		ac.mean3 = mean(x3.3$AccVectorSum)#
+		x3.2rows = nrow(x3.2)#
+		vals1 = c(i, n, 1, ac.mean1, ac.var1)#
+		vals2 = c(i, n, 2, ac.mean2, ac.var2)#
+		vals3 = c(i, n, 3, ac.mean3, ac.var3)#
+		#vals1 = c(i, n, x3.1$DateTime[1], x3.1$DateTime[1440], 1, ac.mean1, ac.var1)#
+		#vals2 = c(i, n, x3.2$DateTime[1], x3.2$DateTime[x3.2rows], 2, ac.mean2, ac.var2)#
+		#vals3 = c(i, n, x3.3$DateTime[1], x3.3$DateTime[1440], 3, ac.mean3, ac.var3)#
+		vals  = rbind (vals,vals1,vals2,vals3)#
+	}#
+	}#
+}#
+}
+vals
+is(vals)
+vals$[1,1]
+vals[1,1]
+colnames(vals)= c("Set","Trap","Period","AccMean","AccVar")
+vals$Set
+is(vals[1,1])
+is(vals[1,2])
+is(vals[1,3])
+is(vals[1,4])
+is(vals[1,5])
+a<- c(1,2,3)
+is(a)
+a[1,1]
+a(1,1)
+a[1]
+is(a[1])
+i=3
+y2 = subset(y1, Year==2012)
+y2 = subset(y1, YEAR==2012)
+y2
+head(y2)
+y3 = subset(y2,y2$set==i)
+y3
+i
+y3 = subset(y2,y2$SETNO==i)
+y3
+slope = y3$BEGIN_DEPTH - y3$END_DEPTH
+slope
+y3$MEAN_DEPTH
+y3$TRAPS_FISHED
+uniqueSets = unique(x1$Set)#
+vals = vector ('numeric')#
+#
+y2 = subset(y1, YEAR==2012)#
+#
+for(i in min(uniqueSets):max(uniqueSets))	#
+{#
+if (i %in% uniqueSets)#
+{#
+	x2 = subset(x1,x1$Set==i)#
+	uniqueTraps = unique(x2$Trap)#
+	y3 = subset(y2,y2$SETNO==i)#
+	slope = y3$BEGIN_DEPTH - y3$END_DEPTH#
+	for(n in min(uniqueTraps): max(uniqueTraps))#
+	{#
+		x3 = subset(x2,x2$Trap==n)#
+	if (n %in% uniqueTraps)#
+	{#
+		x3$AccVectorSum	= (sqrt((x3$XAccel^2)+(x3$YAccel^2)+(x3$ZAccel^2)))#
+		# Separate into 3 time periods (1-deployment, 2-soak, 3-retrieval)#
+		x3rows = nrow(x3)#
+		x3.1 = x3[1:1440,]#
+		x3.2 = x3[1441:(x3rows-1440),]#
+		x3.3 = x3[(x3rows-1439):x3rows,]#
+		ac.var1	 = var(x3.1$AccVectorSum)	#
+		ac.mean1 = mean(x3.1$AccVectorSum)#
+		ac.var2	 = var(x3.2$AccVectorSum)	#
+		ac.mean2 = mean(x3.2$AccVectorSum)#
+		ac.var3	 = var(x3.3$AccVectorSum)	#
+		ac.mean3 = mean(x3.3$AccVectorSum)#
+		x3.2rows = nrow(x3.2)#
+		vals1 = c(i, n, 1, ac.mean1, ac.var1, y3$MEAN_DEPTH, slope, y3$TRAPS_FISHED)#
+		vals2 = c(i, n, 2, ac.mean2, ac.var2, y3$MEAN_DEPTH, slope, y3$TRAPS_FISHED)#
+		vals3 = c(i, n, 3, ac.mean3, ac.var3, y3$MEAN_DEPTH, slope, y3$TRAPS_FISHED)#
+		# vals to record stat and end times - leads to atomic vector problems#
+		#vals1 = c(i, n, x3.1$DateTime[1], x3.1$DateTime[1440], 1, ac.mean1, ac.var1)#
+		#vals2 = c(i, n, x3.2$DateTime[1], x3.2$DateTime[x3.2rows], 2, ac.mean2, ac.var2)#
+		#vals3 = c(i, n, x3.3$DateTime[1], x3.3$DateTime[1440], 3, ac.mean3, ac.var3)#
+		vals  = rbind (vals,vals1,vals2,vals3)#
+	}#
+	}#
+}#
+}#
+colnames(vals)= c("Set","Trap","Period","AccMean","AccVar", "MeanSetDepth", "SetSlope", "#Traps")
+head(vals)
+vals
+write.csv(vals, file="2012Survey_Processed.csv")
+a <- c(1,2,3)
+max(a)
+sum(a>3)
+sum(a>=3)
+head(x3)
+dim(x3)
+x3$AccVectorSum	= (sqrt((x3$XAccel^2)+(x3$YAccel^2)+(x3$ZAccel^2)))#
+		ac.mean = mean(x3$AccVectorSum)#
+		ac.var	= var(x3$AccVectorSum)	#
+		ac.max  = max(x3$AccVectorSum)#
+		ac.min  = min(x3$AccVectorSum)#
+		T1		= sum(x3$AccVectorSum >= .25*ac.max)#
+		T2		= sum(x3$AccVectorSum >= .50*ac.max)
+T1
+ac.max
+ac.min
+ac.mean
+T2
+for(i in min(uniqueSets):max(uniqueSets))	#
+{#
+if (i %in% uniqueSets)#
+{#
+	x2 = subset(x1,x1$Set==i)#
+	uniqueTraps = unique(x2$Trap)#
+	y3 = subset(y2,y2$SETNO==i)#
+	slope = y3$BEGIN_DEPTH - y3$END_DEPTH#
+	for(n in min(uniqueTraps): max(uniqueTraps))#
+	{#
+		x3 = subset(x2,x2$Trap==n)#
+	if (n %in% uniqueTraps)#
+	{#
+		x3$AccVectorSum	= (sqrt((x3$XAccel^2)+(x3$YAccel^2)+(x3$ZAccel^2)))#
+		ac.mean = mean(x3$AccVectorSum)#
+		ac.var	= var(x3$AccVectorSum)	#
+		ac.max  = max(x3$AccVectorSum)#
+		ac.min  = min(x3$AccVectorSum)#
+		T1		= sum(x3$AccVectorSum >= .25*ac.max)#
+		T2		= sum(x3$AccVectorSum >= .50*ac.max)#
+		vals1 = c(i, n, ac.mean, ac.var, T1,T2, y3$MEAN_DEPTH, slope)#
+		# vals to record stat and end times - leads to atomic vector problems#
+		vals  = rbind (vals,vals1,vals2,vals3)#
+	}#
+	}#
+}#
+}
+a% = c(1,2,3)
+head(vals)
+Processing 2012 Sablefish survey data for exploratory analysis	##
+# Author: B. Doherty                                          		##
+# Date Revised:                                                     ##
+# Aug. 26,2014-06													##
+#-------------------------------------------------------------------##
+#
+# Analyze accelerometer data from 2012 sablefish survey#
+#
+rm(list=ls())#
+#
+setwd("/Users/beaudoherty/Documents/SFU/REM 699/sablefish data/DohertyCoxData")#
+#
+x1= read.csv("Accelerometer_Survey_2012.csv", sep=",")	#Read-in csv#
+y1= read.csv("Sensor_Fishing_Events.csv", sep=",")#
+#
+uniqueSets = unique(x1$Set)#
+vals = vector ('numeric')#
+#
+y2 = subset(y1, YEAR==2012)#
+#
+for(i in min(uniqueSets):max(uniqueSets))	#
+{#
+if (i %in% uniqueSets)#
+{#
+	x2 = subset(x1,x1$Set==i)#
+	uniqueTraps = unique(x2$Trap)#
+	y3 = subset(y2,y2$SETNO==i)#
+	slope = y3$BEGIN_DEPTH - y3$END_DEPTH#
+	for(n in min(uniqueTraps): max(uniqueTraps))#
+	{#
+		x3 = subset(x2,x2$Trap==n)#
+	if (n %in% uniqueTraps)#
+	{#
+		x3$AccVectorSum	= (sqrt((x3$XAccel^2)+(x3$YAccel^2)+(x3$ZAccel^2)))#
+		Events  = nrows(x3)#
+		ac.mean = mean(x3$AccVectorSum)#
+		ac.var	= var(x3$AccVectorSum)	#
+		ac.max  = max(x3$AccVectorSum)#
+		ac.min  = min(x3$AccVectorSum)#
+		T1		= sum(x3$AccVectorSum >= .75*ac.max)/Events # Proportion of Events within 25% of ac.max#
+		T2		= sum(x3$AccVectorSum >= .50*ac.max)/Events # Proportion of Events within 50% of ac.max#
+		vals1 = c(i, n, ac.mean, ac.var, T1,T2, y3$MEAN_DEPTH, slope)#
+		# vals to record start and end times - leads to atomic vector problems#
+		vals  = rbind (vals, vals1)		#
+	}#
+	}#
+}#
+}#
+colnames(vals)= c("Set","Trap","AccMean","AccVar", "T1", "T2", "MeanDepth" "SetSlope")
+head(vals)
+vals
+Events  = nrows(x3)
+x3
+nrows(x3)
+nrow\(x3)
+nrow(x3)
+Processing 2012 Sablefish survey data for exploratory analysis	##
+# Author: B. Doherty                                          		##
+# Date Revised:                                                     ##
+# Aug. 26,2014-06													##
+#-------------------------------------------------------------------##
+#
+# Analyze accelerometer data from 2012 sablefish survey#
+#
+rm(list=ls())#
+#
+setwd("/Users/beaudoherty/Documents/SFU/REM 699/sablefish data/DohertyCoxData")#
+#
+x1= read.csv("Accelerometer_Survey_2012.csv", sep=",")	#Read-in csv#
+y1= read.csv("Sensor_Fishing_Events.csv", sep=",")#
+#
+uniqueSets = unique(x1$Set)#
+vals = vector ('numeric')#
+#
+y2 = subset(y1, YEAR==2012)#
+#
+for(i in min(uniqueSets):max(uniqueSets))	#
+{#
+if (i %in% uniqueSets)#
+{#
+	x2 = subset(x1,x1$Set==i)#
+	uniqueTraps = unique(x2$Trap)#
+	y3 = subset(y2,y2$SETNO==i)#
+	slope = y3$BEGIN_DEPTH - y3$END_DEPTH#
+	for(n in min(uniqueTraps): max(uniqueTraps))#
+	{#
+		x3 = subset(x2,x2$Trap==n)#
+	if (n %in% uniqueTraps)#
+	{#
+		x3$AccVectorSum	= (sqrt((x3$XAccel^2)+(x3$YAccel^2)+(x3$ZAccel^2)))#
+		Events  = nrow(x3)#
+		ac.mean = mean(x3$AccVectorSum)#
+		ac.var	= var(x3$AccVectorSum)	#
+		ac.max  = max(x3$AccVectorSum)#
+		ac.min  = min(x3$AccVectorSum)#
+		T1		= sum(x3$AccVectorSum >= .75*ac.max)/Events # Proportion of Events within 25% of ac.max#
+		T2		= sum(x3$AccVectorSum >= .50*ac.max)/Events # Proportion of Events within 50% of ac.max#
+		vals1 = c(i, n, ac.mean, ac.var, T1,T2, y3$MEAN_DEPTH, slope)#
+		# vals to record start and end times - leads to atomic vector problems#
+		vals  = rbind (vals, vals1)		#
+	}#
+	}#
+}#
+}#
+#
+colnames(vals)= c("Set","Trap","AccMean","AccVar", "T1", "T2", "MeanDepth" "SetSlope")#
+#
+write.csv(vals, file="2012Survey_Sparkplots.csv")
+head(vals)
+vals
+uniqueSets = unique(x1$Set)#
+vals = vector ('numeric')#
+#
+y2 = subset(y1, YEAR==2012)#
+#
+for(i in min(uniqueSets):max(uniqueSets))	#
+{#
+if (i %in% uniqueSets)#
+{#
+	x2 = subset(x1,x1$Set==i)#
+	uniqueTraps = unique(x2$Trap)#
+	y3 = subset(y2,y2$SETNO==i)#
+	slope = y3$BEGIN_DEPTH - y3$END_DEPTH#
+	for(n in min(uniqueTraps): max(uniqueTraps))#
+	{#
+		x3 = subset(x2,x2$Trap==n)#
+	if (n %in% uniqueTraps)#
+	{#
+		x3$AccVectorSum	= (sqrt((x3$XAccel^2)+(x3$YAccel^2)+(x3$ZAccel^2)))#
+		Events  = nrow(x3)#
+		ac.mean = mean(x3$AccVectorSum)#
+		ac.var	= var(x3$AccVectorSum)	#
+		ac.max  = max(x3$AccVectorSum)#
+		ac.min  = min(x3$AccVectorSum)#
+		T1		= sum(x3$AccVectorSum >= .75*ac.max)/Events # Proportion of Events within 25% of ac.max#
+		T2		= sum(x3$AccVectorSum >= .50*ac.max)/Events # Proportion of Events within 50% of ac.max#
+		vals1 = c(i, n, ac.mean, ac.var, T1,T2, Events, y3$MEAN_DEPTH, slope)#
+		# vals to record start and end times - leads to atomic vector problems#
+		vals  = rbind (vals, vals1)		#
+	}#
+	}#
+}#
+}#
+#
+colnames(vals)= c("Set","Trap","AccMean","AccVar", "T1", "T2", "Events", "MeanDepth", "SetSlope")
+vals
+write.csv(vals, file="2012Survey_Sparkplots.csv")
